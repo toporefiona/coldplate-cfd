@@ -8,7 +8,11 @@ plate:
   port_length: 30
   wall: 5
   edge_margin: 10
-  
+
 channels:
   min: 6
   max: 16
+
+
+mesh:
+  cell_size: 2
