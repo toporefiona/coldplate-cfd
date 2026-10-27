@@ -1,0 +1,14 @@
+# Cold plate study settings. All lengths in millimetres.
+plate:
+  length: 400
+  width: 200
+  inlet_header: 30
+  outlet_header: 30
+  port_width: 15
+  port_length: 30
+  wall: 5
+  edge_margin: 10
+  
+channels:
+  min: 6
+  max: 16
