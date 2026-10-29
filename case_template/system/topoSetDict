@@ -1,0 +1,25 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      topoSetDict; //a tool that picks out groups of cells or faces
+}
+
+actions
+(
+    {
+        name    channelsSet; //the name of the group being made
+        type    cellSet; //it is a group of cells
+        action  new;
+        source  boxToCell;
+        box     (0.03 -1 -1) (0.37 1 1); //picks every cell who's centre lies in this box of coordinates, which is the channel box
+    }
+    {
+        name    channels;
+        type    cellZoneSet; //makes a cell zone, which is what the heat source needs
+        action  new;
+        source  setToCellZone;
+        set     channelsSet;
+    }
+);

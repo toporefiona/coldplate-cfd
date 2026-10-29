@@ -1,0 +1,36 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volVectorField; // one vector per cell (Ux, Uy, Uz)
+    object      U;              // the field name
+}
+
+dimensions      [0 1 -1 0 0 0 0]; // units in the order mass, length, time, temperature, amount, current, light. length^1 time^-1 = m/s
+
+internalField   uniform (0 0 0); // the water starts at rest everywhere
+
+boundaryField
+{
+    inlet
+    {
+        type            fixedValue;
+        value           uniform (0.25 0 0); // sets 0.25 m/s in +x, into the plate
+    }
+    outlet
+    {
+        type            zeroGradient; // the velocity does not change across the outlet, so the flow leaves however it arrives
+    }
+    walls
+    {
+        type            noSlip; // sets 0 velocity at a solid wall
+    }
+    heated_walls
+    {
+        type            noSlip;
+    }
+    frontAndBack
+    {
+        type            empty; // no solving in z, so the case is 2D
+    }
+}

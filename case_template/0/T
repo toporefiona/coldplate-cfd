@@ -1,0 +1,36 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField; // one value per cell
+    object      T;
+}
+
+dimensions      [0 0 0 0 0 0 0];  // dimensionless, we keep T in degrees C ourselves
+
+internalField   uniform 25;       // starting guess: 25 C everywhere
+
+boundaryField
+{
+    inlet
+    {
+        type            fixedValue;
+        value           uniform 25;   // coolant enters at 25 C
+    }
+    outlet
+    {
+        type            zeroGradient; // leaves at whatever temperature it reaches
+    }
+    walls
+    {
+        type            zeroGradient; // adiabatic, no heat through the wall
+    }
+    heated_walls
+    {
+        type            zeroGradient; // adiabatic, heat is added inside the water instead
+    }
+    frontAndBack
+    {
+        type            empty;        // 2D direction
+    }
+}
