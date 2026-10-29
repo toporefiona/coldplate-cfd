@@ -51,6 +51,14 @@ Last updated: 28 October 2026
 
 **What we found:** In the N6 baseline, the inlet jet crosses the 30 mm inlet header, hits the end of the middle strip, and splits into channels 3 and 4. Channels 1, 2, 5 and 6 get almost no flow. Water swirls in the header corners instead.
 
+Measured at x = 200 mm (halfway along the channels), N6 baseline:
+
+| Channel | 1 | 2 | 3 | 4 | 5 | 6 |
+|---|---|---|---|---|---|---|
+| Share of flow | 8.8% | 6.1% | 35.1% | 35.3% | 5.8% | 8.9% |
+
+Channels 3 and 4 carry 70% of the flow. Channels 2 and 5 get the least, because the swirls in the header corners feed channels 1 and 6. Lowest / highest flow = 0.17 (an even split would be 1.0).
+
 **Why it matters:** Battery cells above the outer channels would be poorly cooled and run hot. This is the main source of temperature non-uniformity (ΔT) between cells.
 
 **Why it happens:** The inlet header is too short for the jet to slow down and spread sideways. The port is centred, so the jet points straight at the middle channels.
@@ -85,6 +93,8 @@ Last updated: 28 October 2026
 **What to change:**
 - Set the cell size from the channel width (for example, at least 10 cells across each channel), instead of one fixed value.
 - Run a mesh independence study (Δp and T_max against cell count) on the narrowest and widest plates.
+
+**Flow measurement:** Plot Over Line underestimates the total channel flow by about 6% on the 2 mm mesh (3.532e-3 against 3.750e-3 m²/s at the inlet), because ParaView interpolates to zero at the walls across one coarse cell. The channel shares are still good to about 1 percentage point. For the automated study, measure each channel's flow from OpenFOAM's own face fluxes (phi) on a face zone across each channel, which is exact. A finer mesh also reduces the gap.
 
 ---
 
