@@ -107,6 +107,14 @@ if __name__ == '__main__':
         settings['mesh']['cell_size'] = float(sys.argv[sys.argv.index('--cell') + 1])
     if '--wall' in sys.argv:
         settings['mesh']['wall_cell_size'] = float(sys.argv[sys.argv.index('--wall') + 1])
+    if '--header' in sys.argv:
+        header = float(sys.argv[sys.argv.index('--header') + 1])
+        plate = settings['plate']
+        channel_length = plate['length'] - plate['inlet_header'] - plate['outlet_header']
+        plate['inlet_header'] = header
+        plate['outlet_header'] = header
+        plate['length'] = channel_length + 2 * header
     cell = settings['mesh']['cell_size']
     wall_cell = settings['mesh'].get('wall_cell_size', cell)
-    build_plate(n, settings, f'plate_N{n}_c{cell}_w{wall_cell}.msh', show)
+    h = settings['plate']['inlet_header']
+    build_plate(n, settings, f'plate_N{n}_h{h}_c{cell}_w{wall_cell}.msh', show)
