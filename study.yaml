@@ -15,4 +15,6 @@ channels:
 
 
 mesh:
-  cell_size: 2
+  cell_size: 2        # mm, largest cells (middle of channels and headers)
+  wall_cell_size: 2   # mm, cells next to the walls (same as cell_size = no refinement)
+  wall_zone: 5        # mm, distance over which cells grow from the wall size to cell_size

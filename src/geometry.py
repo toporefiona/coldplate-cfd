@@ -15,6 +15,9 @@ def build_plate(n_channels, settings, out_file, show=False): #t takes the number
     pw, pl = plate['port_width'], plate['port_length']
     w = channel_width(n_channels, plate)
     cell = settings['mesh']['cell_size'] * MM
+    wall_cell = settings['mesh'].get('wall_cell_size', settings['mesh']['cell_size']) * MM
+    wall_zone = settings['mesh'].get('wall_zone', 5) * MM
+    tol = 1e-5
 
     gmsh.initialize()
     gmsh.option.setNumber('General.Verbosity', 2) #sets how much gmsh prints. 2 means warnings and errors only
@@ -31,6 +34,15 @@ def build_plate(n_channels, settings, out_file, show=False): #t takes the number
         y = edge + i * w + (i - 1) * wall #strip i starts across the plate: the edge margin, plus i channels, plus the i − 1 strips before it
         strips.append((2, occ.addRectangle(x0 * MM, y * MM, 0, (x1 - x0) * MM, wall * MM))) ##draws that strip, from x0 to x1 along the plate, and wall (5 mm) wide, and adds it to the list
     fluid, _ = occ.cut(fluid, strips) #cuts all the strips out of the coolant reigon
+    occ.synchronize() #updates the gmsh's model
+
+    wall_curves = [] #empty list of wall edges
+    for dim, tag in gmsh.model.getBoundary(fluid, oriented=False): #creates the boundary of the edges
+        xmin, ymin, zmin, xmax, ymax, zmax = gmsh.model.getBoundingBox(dim, tag)
+        at_inlet = abs(xmax + pl * MM) < tol
+        at_outlet = abs(xmin - (L + pl) * MM) < tol
+        if not (at_inlet or at_outlet):
+            wall_curves.append(tag) #means “every other edge is a wall”, including all the strip edges, so it is added to the list. We want small cells along these edges
 
     occ.extrude(fluid, 0, 0, cell, numElements=[1], recombine=True) #pulls the flat shape up in z by one cell size, with exactly 1 cell through the thickness (numElements=[1]). recombine=True makes the cells blocks (hexahedra) rather than wedges. Just like the cavity tutorial: a 2D case in OpenFOAM is a 3D mesh one cell thick
     occ.synchronize() #copies everything from the CAD engine into gmsh’s model, so the next steps can see it
@@ -55,22 +67,46 @@ def build_plate(n_channels, settings, out_file, show=False): #t takes the number
         gmsh.model.addPhysicalGroup(2, tags, name=name) #and names those faces in gmsh. These become the patch names in OpenFOAM
     gmsh.model.addPhysicalGroup(3, [volume], name='fluid') #names the 3D reigon itself
 
+    if wall_cell < cell:
+        field = gmsh.model.mesh.field
+        dist = field.add('Distance') #measures the distance from any point to the nearest wall edge
+        field.setNumbers(dist, 'CurvesList', wall_curves) #tells it which edges to measure from: our wall list
+        field.setNumber(dist, 'Sampling', 400) #how many points along each edge it uses to measure distance. More points means more accuracy along the long strips
+        thr = field.add('Threshold') #creates a field that turns distance into a cell size
+        field.setNumber(thr, 'InField', dist)
+        field.setNumber(thr, 'SizeMin', wall_cell)
+        field.setNumber(thr, 'SizeMax', cell)
+        field.setNumber(thr, 'DistMin', wall_cell)
+        field.setNumber(thr, 'DistMax', wall_zone)
+        field.setAsBackgroundMesh(thr) #makes this the rule gmsh uses to size cells
+        gmsh.option.setNumber('Mesh.MeshSizeExtendFromBoundary', 0) #switch off gmsh's other ways of choosing cell sizes, so only our rule is used
+        gmsh.option.setNumber('Mesh.MeshSizeFromPoints', 0)
+        gmsh.option.setNumber('Mesh.MeshSizeFromCurvature', 0)
+
     gmsh.option.setNumber('Mesh.CharacteristicLengthMax', cell) #no cell bigger than cell (2mm)
     gmsh.option.setNumber('Mesh.Algorithm', 8) #a meshing method that is good at making 4-sided cells
     gmsh.option.setNumber('Mesh.RecombineAll', 1) #turn triangles into quadrilaterals wherever possible. OpenFOAM prefers them
-    gmsh.option.setNumber('Mesh.MshFileVersion', 2.2) #save in the older file format, the one OpenFOAM’s gmshToFoam reads
+    gmsh.option.setNumber('Mesh.MshFileVersion', 2.2) #save in the older file format, the one OpenFOAM's gmshToFoam reads
     gmsh.model.mesh.generate(3) #makes the mesh
     gmsh.write(out_file) #saves it to a file
 
-    print(f'{n_channels} channels, {w:.1f} mm wide')
+    n_cells = len(gmsh.model.mesh.getElementsByType(5)[0]) #script now tells you how many cells each mesh has
+    print(f'{n_channels} channels, {w:.1f} mm wide, {n_cells} cells')
     for name, tags in groups.items(): #prints how many faces ended up in each boundary group, a quick check that the naming worked
         print(f'  {name}: {len(tags)} faces')
     if show:
-        gmsh.fltk.run() #if you asked for it, opens gmsh’s own viewer window so you can see the mesh
+        gmsh.fltk.run() #if you asked for it, opens gmsh's own viewer window so you can see the mesh
     gmsh.finalize() #closes gmsh properly
 
 
 if __name__ == '__main__':
-    n = int(sys.argv[1]) if len(sys.argv) > 1 else 6 #the number of channels you type after the script name, or 6 if you don’t type one. int turns the text “8” into the number 8
-    show = '--show' in sys.argv #True if --show is typed anywhere in the command
-    build_plate(n, load_settings(), f'plate_N{n}.msh', show) #builds and saves the plate
+    settings = load_settings()
+    n = int(sys.argv[1]) if len(sys.argv) > 1 else 6
+    show = '--show' in sys.argv
+    if '--cell' in sys.argv:
+        settings['mesh']['cell_size'] = float(sys.argv[sys.argv.index('--cell') + 1])
+    if '--wall' in sys.argv:
+        settings['mesh']['wall_cell_size'] = float(sys.argv[sys.argv.index('--wall') + 1])
+    cell = settings['mesh']['cell_size']
+    wall_cell = settings['mesh'].get('wall_cell_size', cell)
+    build_plate(n, settings, f'plate_N{n}_c{cell}_w{wall_cell}.msh', show)
