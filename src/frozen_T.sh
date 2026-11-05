@@ -1,11 +1,12 @@
 #!/bin/bash
 # Solve the temperature on a frozen, converged flow (one-way coupling).
 # Run from ~/coldplate-cfd with OpenFOAM switched on:
-#   bash src/frozen_T.sh <flow case> <new case name>
+#   bash src/frozen_T.sh <flow case> <new case name> [heat source in K/s]
 set -e
 
 flow=runs/$1
 heat=runs/$2
+source_rate=${3:-0.304}
 latest=$(cd "$flow" && foamListTimes -latestTime | tail -1)
 
 mkdir -p "$heat"
@@ -13,8 +14,9 @@ cp -r "$flow/constant" "$flow/system" "$heat/"
 cp -r "$flow/$latest" "$heat/0"
 cd "$heat"
 rm -rf 0/uniform processor*
+[ -f 0/T ] || cp "../$1/0/T" 0/T
 
-cat > constant/fvOptions << 'EOF'
+cat > constant/fvOptions << EOF
 FoamFile
 {
     version     2.0;
@@ -31,7 +33,7 @@ batteryHeat
     volumeMode      specific;
     injectionRateSuSp
     {
-        T           (0.304 0);
+        T           ($source_rate 0);
     }
 }
 EOF
@@ -74,11 +76,10 @@ runTimeModifiable true;
 EOF
 
 foamDictionary system/fvSchemes -entry ddtSchemes/default -set steadyState > /dev/null
-foamDictionary system/fvSolution -entry relaxationFactors -set "{ equations { T 0.9; } }" > /dev/null
-foamDictionary system/fvSolution -entry solvers/T -set "{ solver PBiCGStab; preconditioner DILU; tolerance 1e-8; relTol 0; }" > /dev/null
-
-sed -i "s/div(phi,T).*/div(phi,T)      bounded Gauss upwind;/" system/fvSchemes
 foamDictionary system/fvSolution -entry relaxationFactors -set "{ equations { T 0.7; } }" > /dev/null
+foamDictionary system/fvSolution -entry solvers/T -set "{ solver PBiCGStab; preconditioner DILU; tolerance 1e-8; relTol 0; }" > /dev/null
+sed -i "s/div(phi,T).*/div(phi,T)      bounded Gauss upwind;/" system/fvSchemes
+
 scalarTransportFoam > log.scalarTransportFoam 2>&1
 cp 0/U 0/p 0/phi 2000/
 
