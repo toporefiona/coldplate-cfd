@@ -20,7 +20,7 @@ def run(command, case, log):
                        stdout=f, stderr=subprocess.STDOUT)
 
 
-def run_case(run_id, n_channels, u_in, cores=6):
+def run_case(run_id, n_channels, u_in, cores=6, travel=1.5):
     """Build, run and measure one design. Returns a dictionary of results."""
     settings = load_settings()
     plate = settings['plate']
@@ -40,7 +40,7 @@ def run_case(run_id, n_channels, u_in, cores=6):
     # 2. Switch to the pseudo-transient settings and set this design's flow
     for name in ['controlDict', 'fvSchemes', 'fvSolution', 'decomposeParDict']:
         shutil.copy(Path('case_template_pseudo') / name, case / 'system' / name)
-    end_time = round(1.5 / u_in, 2)
+        end_time = round(travel / u_in, 2)
     run(f'foamDictionary 0/U -entry boundaryField/inlet/value -set "uniform ({u_in} 0 0)"', case, 'log.setup')
     run(f'foamDictionary system/controlDict -entry endTime -set {end_time}', case, 'log.setup')
     run(f'foamDictionary system/controlDict -entry writeInterval -set {end_time / 5:.3f}', case, 'log.setup')
