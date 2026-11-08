@@ -20,9 +20,11 @@ def run(command, case, log):
                        stdout=f, stderr=subprocess.STDOUT)
 
 
-def run_case(run_id, n_channels, u_in, cores=6, travel=1.5):
+def run_case(run_id, n_channels, u_in, cores=6, travel=1.5, mesh=None):
     """Build, run and measure one design. Returns a dictionary of results."""
     settings = load_settings()
+    if mesh:
+        settings['mesh']['cell_size'], settings['mesh']['wall_cell_size'] = mesh
     plate = settings['plate']
     physics = settings['physics']
     case = Path('runs') / run_id
