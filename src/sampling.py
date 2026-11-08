@@ -45,6 +45,7 @@ for size in sizes:
     print(f"{size} designs done")
 
 errors = pd.DataFrame(rows) #turns the list of results into a table
+errors.to_csv('sampling_errors.csv', index=False)
 summary = errors.groupby('size').mean() #groups the roles and averages each group
 print("\nAverage test error for each number of training simulations:")
 for size, row in summary.iterrows():
