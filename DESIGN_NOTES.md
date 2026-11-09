@@ -4,7 +4,7 @@ Things we have learned about the cold plate design and the model, and what needs
 
 Status: **Open** = still to do. **Done** = changed already. **Watch** = fine for now, check again later.
 
-Last updated: 29 October 2026 (end of Phase 3)
+Last updated: 9 November 2026 (end of Phase 8)
 
 ---
 
@@ -26,7 +26,7 @@ Last updated: 29 October 2026 (end of Phase 3)
 
 ## 2. Settings are typed by hand in several files
 
-**Status:** Open
+**Status:** Watch (mostly done: heat, depth and speeds are in `study.yaml` and `run_case.py` works out the heat source per design; the depth friction is still typed in `case_template/constant/fvOptions`, which is fine while the depth stays at 3 mm, but must be automated if depth becomes a study input)
 
 **What we found:** Several study values are typed directly into different files, so changing one means editing several places, and they can disagree:
 
@@ -54,7 +54,7 @@ Last updated: 29 October 2026 (end of Phase 3)
 
 ## 4. Strong flow maldistribution: most water goes through the middle two channels
 
-**Status:** Open (main design finding so far)
+**Status:** Open (design issue, confirmed across the study: in every design the jet feeds the middle channel or channels, and the channels right beside them get the least, see run_009 in section 16 and the N11 check in section 17. Fixing it needs changes to the inlet, such as a baffle, a tapered header or several ports)
 
 **What we found:** In the N6 baseline, the inlet jet crosses the 30 mm inlet header, hits the end of the middle strip, and splits into channels 3 and 4. Water swirls in the header corners and feeds channels 1 and 6 a little more than channels 2 and 5.
 
@@ -133,7 +133,7 @@ Doubling the header helps only a little. Channels 2 and 5 are still starved. Rea
 
 ## 8. Convergence and how to measure results
 
-**Status:** Open (for Phase 5 automation)
+**Status:** Done (Phase 5: every run is checked automatically, with Δp change below 0.1% over the last fifth of the run and the outlet temperature matching the energy balance; outlet temperatures are flow weighted)
 
 **What we found:**
 - With depth friction, residuals fall smoothly until about 1150 iterations, then flatten with slow waves (p about 2e-4, Uy about 3e-5). A small swirl in a header is still moving slightly. But Δp at 1600, 1800 and 2000 iterations agreed to 6 significant figures, so the result is converged for our purposes.
@@ -147,6 +147,8 @@ Doubling the header helps only a little. Channels 2 and 5 are still starved. Rea
 - Always use `operation=weightedAverage, weightField=phi` for outlet temperatures.
 
 **Solver settings that worked:** standard SIMPLE (`consistent no`), relaxation p 0.3, U 0.7 (T uses 0.7 too). T saved only at write times (`writeControl writeTime` in the temperature function).
+
+**Update:** the study uses the pseudo-transient method from section 14, not SIMPLE.
 
 ---
 
@@ -171,14 +173,14 @@ Doubling the header helps only a little. Channels 2 and 5 are still starved. Rea
 **Effect on results:** The overall water temperature rise is correct (it depends only on total heat and flow). The temperature differences between channels are overstated, because there is no sideways spreading through the metal. The model is pessimistic about uniformity.
 
 **What to change later:**
-- In Phase 7, run a few conjugate heat transfer cases (`chtMultiRegionFoam`, with the metal included) and measure how much this simplification overstates ΔT.
+- Future work: run a few conjugate heat transfer cases (`chtMultiRegionFoam`, with the metal included) and measure how much this simplification overstates ΔT.
 - Possible version 2: add a second 2D layer for the top wall (heat conduction in the metal, linked to the water with a heat transfer coefficient). This captures sideways spreading while staying fast.
 
 ---
 
 ## 11. Temperature results: the N6 baseline fails on uniformity
 
-**Status:** Open (main result of Phase 3)
+**Status:** Done (baseline result; the full picture across 40 designs is in section 16)
 
 **What we found:**
 - Outlet water temperature (flow weighted): **29.28 °C**, against 29.27 °C from the energy balance (within 0.15% of the temperature rise).
@@ -223,13 +225,13 @@ Doubling the header helps only a little. Channels 2 and 5 are still starved. Rea
 
 ---
 
-## Inputs and outputs for the surrogate (current thinking)
+## Inputs and outputs for the surrogate
 
-**Inputs:** number of channels (6 to 16). Likely additions: header length, flow rate, channel depth, port width, and inlet features that spread the jet (baffle, tapered header, several ports).
+**Used:** inputs N (6 to 16) and inlet velocity (0.1 to 0.3 m/s). Outputs Δp, T max and flow uniformity (sections 17 and 18).
 
-**Outputs:** Δp, T_max, temperature spread, and flow uniformity (lowest / highest channel flow). Battery surface temperature once section 11 is added.
+**Next inputs to add:** header length, port width, channel depth, and inlet features that spread the jet (baffle, tapered header, several ports).
 
-The flow is steady (section 14), so single steady values are fine as outputs, as long as every run is checked for convergence.
+**Next outputs to add:** temperature spread, and battery surface temperature once the metal is modelled (section 10).
 
 ## 13. Validation: straight channel against exact solutions
 
@@ -280,7 +282,7 @@ The flow is steady (section 14), so single steady values are fine as outputs, as
 
 **Chosen mesh: M3** (1.4 mm main cells, 0.7 mm at the walls), now the default in `study.yaml`. Every design uses the same settings, so the small, consistent error largely cancels when comparing designs, which is what the surrogate learns. About 6 minutes per design on 6 cores, against about 18 for M4.
 
-**To do at the end of the study:** rerun a few designs (for example the best and worst) on M4 to confirm the error stays at about 3% for Δp and 1.5 to 2 °C for T max.
+**Still to do (optional):** rerun a few designs (for example, the best and worst) on M4 to confirm that the error remains at about 3% for Δp and 1.5-2 °C for T max.
 
 **Lessons:**
 - A steady solver can converge on a coarse mesh and fail on a fine one. Convergence must be checked on every mesh.
@@ -320,7 +322,7 @@ The flow is steady (section 14), so single steady values are fine as outputs, as
 - **Diminishing returns:** from 23 to 54 Pa, T max drops 6.4 °C. From 54 to 132 Pa, only 2.9 °C more. The sweet spot is about 35 to 55 Pa (T max about 34 to 36 °C).
 - **More channels win:** nearly every Pareto design has 11 to 16 channels. No 6 or 7 channel design is on the front.
 - **Slower flow spreads more evenly:** the lowest / highest channel flow is about 0.42 to 0.50 at 0.10 to 0.13 m/s, but only 0.25 to 0.28 at 0.26 to 0.30 m/s. This matches the jet damping length U h² / (12 ν), which is proportional to velocity (about 85 mm at 0.10 m/s, about 240 mm at 0.29 m/s).
-- **Pumping harder can make parts of the plate worse:** in run_009 (8 channels, 0.29 m/s) the jet sends almost all the water down the two middle channels, and the two channels beside the middle pair get only 0.5% and 1.1% of the flow. Its water reaches 118 °C in the model, against about 40 °C for every other design. The effect is real (fast jet, few channels), but the temperature is exaggerated because the model has no metal to spread heat sideways (section 10).
+- **Pumping harder can make parts of the plate worse:** in run_009 (8 channels, 0.29 m/s) the jet sends two-thirds of the water down the two middle channels, and the two channels beside the middle pair get only 0.5% and 1.1% of the flow. Its water reaches 118 °C in the model, against about 40 °C for every other design. The effect is real (fast jet, few channels), but the temperature is exaggerated because the model has no metal to spread heat sideways (section 10).
 
 **For the surrogate:** run_009 is an extreme point that a smooth surrogate will struggle with. Options for Phase 6: train on the other designs and report run_009 separately, predict a transformed T max, or add a flow uniformity output so the surrogate can flag designs at risk of starving a channel.
 
@@ -386,7 +388,7 @@ The flow is steady (section 14), so single steady values are fine as outputs, as
 
 **Results:**
 - T max error: 1.71 °C at 10 simulations, 0.85 °C at 11, 0.69 °C at 17. Random sampling (step D average) needed 25 simulations for 0.69 °C. About 30% fewer simulations.
-- The first pick alone (6 ch, 0.10 m/s, the hottest corner) halved the T max error. With 11 simulations, adaptive beat random with 20.
+- Adding the first pick (6 ch, 0.10 m/s, the hottest corner) to the training data halved the T max error on the test designs. With 11 simulations, adaptive beat random with 20.
 - Δp error: 2.6% at 10, 0.8% by 13, then flat (limited by the mesh, not the data).
 - Then a plateau from 12 to 16: the edge designs reduced uncertainty where the test designs aren't. Picking purely by uncertainty spends many runs on the boundaries.
 - Some individual random picks did better than adaptive (one 20 simulation pick at about 0.5 °C). Adaptive beats the typical random pick, without relying on luck.
@@ -416,7 +418,7 @@ The flow is steady (section 14), so single steady values are fine as outputs, as
 - 3 M3 runs: M3 only 19.4% / 2.78 °C, multi-fidelity 2.2% / 0.58 °C.
 - 5 M3 runs: M3 only 5.2% / 1.96 °C, multi-fidelity 1.8% / 0.56 °C.
 - 29 M3 runs: M3 only 1.0% / 0.62 °C, multi-fidelity 0.8% / 0.22 °C.
-- **29 M1 + 5 M3 runs (51 min of computing) matches 29 M3 runs (209 min) on T max, with Δp within the mesh error. About a quarter of the computing time.**
+- **29 M1 + 5 M3 runs (51 min of computing) matches 29 M3 runs (209 min) on T max, with Δp within the mesh error. About a quarter of the computing time. Matching Δp as well (1.0%) needs about 20 M3 runs (159 min).**
 - With all 29 M3 runs as well, T max error 0.22 °C, the best surrogate in the project.
 
 **Open question:** the M1 surface predicts M3 T max better than an M3 surrogate trained on the same designs. This suggests part of the bumpiness in M3 T max is numerical scatter (the single hottest cell moving on the finer mesh), not only the physical jet effects found in sections 17 and 18. Probably both. A check: compare T max with a flow weighted or area averaged hot spot measure, which should be less sensitive to single cells.
