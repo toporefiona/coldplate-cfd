@@ -37,7 +37,7 @@ def field(case):
 
 colours = LinearSegmentedColormap.from_list('plate', ['#0d366b', '#5aa0e6', '#f5d33f', '#f28e2b', '#c0392b'])
 designs = [('runs/check_N16_U0113_heat', '16 channels, 0.113 m/s: even cooling'),
-           ('runs/run_009_heat', '8 channels, 0.29 m/s: one channel starved of water')]
+           ('runs/run_009_heat', '8 channels, 0.29 m/s: two channels starved of water')]
 
 fig, axes = plt.subplots(2, 1, figsize=(8, 8.5))
 for ax, (case, title) in zip(axes, designs):
