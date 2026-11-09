@@ -17,11 +17,11 @@ The plate has parallel water channels under a battery giving off 200 W. More cha
 - **Adaptive sampling:** letting the surrogate choose where to simulate reached the same accuracy with about 30% fewer simulations than random sampling.
 - **Multi-fidelity:** 29 cheap coarse mesh runs plus 5 accurate runs matched a surrogate built from 29 accurate runs, for about a quarter of the computing time.
 
-| Even flow: 16 channels, 0.113 m/s | Starved channel: 8 channels, 0.29 m/s |
+| Even flow: 16 channels, 0.113 m/s | Starved channels: 8 channels, 0.29 m/s |
 | --- | --- |
 | ![Even temperature across the plate](results/temperature_N16_U0113.png) | ![One channel overheating](results/temperature_run009.png) |
 
-Both on the same scale (25 to 45 °C). In the 8 channel design, the fast inlet jet runs straight down the middle channels, and one outer channel gets almost no water, so it overheats:
+Both on the same scale (25 to 45 °C). In the 8 channel design, the fast inlet jet runs straight down the middle two channels. The two channels right beside them get almost no water, so they overheat, while the outer channels are fed by water swirling round the corners of the header:
 
 ![Velocity in the 8 channel design at 0.29 m/s](results/velocity_run009.png)
 
