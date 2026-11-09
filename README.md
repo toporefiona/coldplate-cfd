@@ -19,7 +19,7 @@ The plate has parallel water channels under a battery giving off 200 W. More cha
 
 | Even flow: 16 channels, 0.113 m/s | Starved channels: 8 channels, 0.29 m/s |
 | --- | --- |
-| ![Even temperature across the plate](results/temperature_N16_U0113.png) | ![One channel overheating](results/temperature_run009.png) |
+| ![Even temperature across the plate](results/temperature_N16_U0113.png) | ![Two channels overheating](results/temperature_run009.png) |
 
 Both on the same scale (25 to 45 °C). In the 8 channel design, the fast inlet jet runs straight down the middle two channels. The two channels right beside them get almost no water, so they overheat, while the outer channels are fed by water swirling round the corners of the header:
 
