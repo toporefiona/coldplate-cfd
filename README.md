@@ -15,8 +15,7 @@ The plate has parallel water channels under a battery giving off 200 W. More cha
 - **Speed:** the surrogate predicts 891 designs in about a second, against roughly 90 hours of CFD.
 - **Checked with new CFD runs:** the surrogate's best design for a 30 Pa pump was confirmed and beat every design in the original study. Its 120 Pa pick failed, in a jet dominated design, and a flow uniformity flag added afterwards would have warned about it in advance.
 - **Adaptive sampling:** letting the surrogate choose where to simulate reached the same accuracy with about 30% fewer simulations than random sampling.
-- **Multi-fidelity:** 29 cheap coarse mesh runs plus 5 accurate runs matched a surrogate built from 29 accurate runs, for about a quarter of the computing time.
-
+- **Multi-fidelity:** 29 cheap coarse mesh runs plus 5 accurate runs matched the temperature accuracy of 29 accurate runs for about a quarter of the computing time. Matching the pressure drop as well needed about 20 accurate runs, a saving of about a quarter.
 | Even flow: 16 channels, 0.113 m/s | Starved channels: 8 channels, 0.29 m/s |
 | --- | --- |
 | ![Even temperature across the plate](results/temperature_N16_U0113.png) | ![Two channels overheating](results/temperature_run009.png) |
