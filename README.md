@@ -102,6 +102,7 @@ The final surrogate maps every design and finds the coolest one for any pump:
 | 29 accurate (M3) | 209 min | 1.0% | 0.62 °C |
 | 29 cheap (M1) + 5 accurate | 51 min | 1.8% | 0.56 °C |
 | 29 cheap + 29 accurate | 224 min | 0.8% | 0.22 °C |
+| 29 cheap (M1) + 20 accurate | 159 min | 1.0% | 0.51 °C |
 
 ![Multi-fidelity against accurate runs only](results/multifidelity.png)
 
