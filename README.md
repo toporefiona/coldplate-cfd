@@ -4,7 +4,7 @@ An automated CFD study and machine learning surrogate for a liquid cooled batter
 
 The plate has parallel water channels under a battery giving off 200 W. More channels and faster flow cool the battery better, but need a stronger pump. This project maps that trade-off with 40 automated simulations, trains a Gaussian process surrogate that predicts any design in a fraction of a second, checks it against fresh CFD runs, and then tests three ways of getting a good surrogate from fewer expensive simulations.
 
-![Cooling against pumping pressure for 40 designs](results/tradeoff.png)
+![Temperature in the best design: 16 channels at 0.113 m/s](results/temperature_N16_U0113.png)
 
 ## Headline results
 
@@ -16,6 +16,14 @@ The plate has parallel water channels under a battery giving off 200 W. More cha
 - **Checked with new CFD runs:** the surrogate's best design for a 30 Pa pump was confirmed and beat every design in the original study. Its 120 Pa pick failed, in a jet dominated design, and a flow uniformity flag added afterwards would have warned about it in advance.
 - **Adaptive sampling:** letting the surrogate choose where to simulate reached the same accuracy with about 30% fewer simulations than random sampling.
 - **Multi-fidelity:** 29 cheap coarse mesh runs plus 5 accurate runs matched a surrogate built from 29 accurate runs, for about a quarter of the computing time.
+
+| Even flow: 16 channels, 0.113 m/s | Starved channel: 8 channels, 0.29 m/s |
+| --- | --- |
+| ![Even temperature across the plate](results/temperature_N16_U0113.png) | ![One channel overheating](results/temperature_run009.png) |
+
+Both on the same scale (25 to 45 °C). In the 8 channel design, the fast inlet jet runs straight down the middle channels, and one outer channel gets almost no water, so it overheats:
+
+![Velocity in the 8 channel design at 0.29 m/s](results/velocity_run009.png)
 
 ## The problem
 
@@ -54,6 +62,8 @@ Richardson extrapolation puts the mesh independent Δp at about 96 to 97 Pa, so 
 ## The design study
 
 40 designs chosen with a Latin hypercube (channels 6 to 16, inlet velocity 0.1 to 0.3 m/s, fixed seed), 30 for training and 10 kept aside for testing. One script builds the geometry and mesh, sets up the case, runs the flow and temperature, and reads the results, so the whole study ran unattended in 4.2 hours. All 40 converged.
+
+![Cooling against pumping pressure for 40 designs](results/tradeoff.png)
 
 ## The surrogate
 
@@ -115,6 +125,7 @@ The final surrogate maps every design and finds the coolest one for any pump:
 | `src/validate_channel.py` | the straight channel validation |
 | `src/surrogate.py`, `src/surrogate_maps.py` | train, test and use the surrogate |
 | `src/uniformity.py`, `src/sampling.py`, `src/adaptive.py`, `src/multifidelity.py` | the uniformity flag and the sampling experiments |
+| `src/plot_fields.py` | draws the temperature and velocity pictures from a finished case |
 | `case_template/`, `case_template_pseudo/` | OpenFOAM case settings |
 | `designs.csv`, `results.csv`, `results_M1.csv` | the designs and their results |
 | `results/` | all plots |
@@ -135,6 +146,7 @@ python src/run_all.py          # run them all (about 4 hours on 6 cores)
 python src/plot_tradeoff.py    # trade-off plot and Pareto front
 python src/surrogate.py        # train and test the surrogate
 python src/surrogate_maps.py   # maps and best designs
+python src/plot_fields.py runs/run_009_heat T results/temperature_run009.png 25 45   # field picture
 ```
 
 The full reasoning behind every choice, including what went wrong and how it was fixed, is in [DESIGN_NOTES.md](DESIGN_NOTES.md).
