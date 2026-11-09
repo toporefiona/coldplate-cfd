@@ -10,7 +10,7 @@ The plate has parallel water channels under a battery giving off 200 W. More cha
 
 - **The trade-off:** along the Pareto front, the hottest coolant temperature falls from 40.1 to 30.9 °C as the pressure drop rises from 23 to 132 Pa. Most of the gain comes early: the sweet spot is about 35 to 55 Pa.
 - **More channels win:** nearly every Pareto design has 11 to 16 channels. Slower flow shares water more evenly between channels, because the inlet jet dies out sooner.
-- **Pumping harder can starve a channel:** at 8 channels and 0.29 m/s, the jet sends almost all the water down the middle channels, and one channel gets 1.4% of the flow of the busiest.
+- **Pumping harder can starve channels:** at 8 channels and 0.29 m/s, the jet sends two thirds of the water down the middle two channels, and the two channels right beside them get only 0.5% and 1.1% of the flow.
 - **Surrogate accuracy on unseen designs:** pressure drop within about 1% (smaller than the mesh error), hottest temperature within 0.6 °C, with uncertainty bands that contained all 10 test designs.
 - **Speed:** the surrogate predicts 891 designs in about a second, against roughly 90 hours of CFD.
 - **Checked with new CFD runs:** the surrogate's best design for a 30 Pa pump was confirmed and beat every design in the original study. Its 120 Pa pick failed, in a jet dominated design, and a flow uniformity flag added afterwards would have warned about it in advance.
