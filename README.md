@@ -91,7 +91,7 @@ The final surrogate maps every design and finds the coolest one for any pump:
 
 ![Flow uniformity map with flagged designs](results/uniformity_map.png)
 
-**2. Adaptive sampling.** Starting from 10 designs, the surrogate repeatedly picked the design it was least sure about, which was then run in CFD. One well chosen run halved the T max error, and with 17 simulations in total (10 random plus 7 chosen) it matched what random sampling needed 25 for.
+**2. Adaptive sampling.** The surrogate started with just 10 designs picked at random from the study, which already had results. It then looked across every possible design, picked the one it was least sure about, and that new design was run in CFD and added to its training data. This was repeated 7 times. The first pick alone halved the T max error, and with 17 simulations in total (the 10 random ones plus the 7 it chose) it matched what random sampling needed 25 for.
 
 ![Adaptive against random sampling](results/adaptive_vs_random.png)
 
