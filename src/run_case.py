@@ -20,7 +20,7 @@ def run(command, case, log):
                        stdout=f, stderr=subprocess.STDOUT)
 
 
-def run_case(run_id, n_channels, u_in, cores=6, travel=1.5, mesh=None):
+def run_case(run_id, n_channels, u_in, cores=6, travel=1.5, mesh=None, widths=None):
     """Build, run and measure one design. Returns a dictionary of results."""
     settings = load_settings()
     if mesh:
@@ -35,7 +35,7 @@ def run_case(run_id, n_channels, u_in, cores=6, travel=1.5, mesh=None):
     # 1. Geometry, mesh and case setup
     case.mkdir(parents=True, exist_ok=True)
     mesh_file = case / 'plate.msh'
-    build_plate(n_channels, settings, str(mesh_file))
+    build_plate(n_channels, settings, str(mesh_file), widths=widths)
     subprocess.run(['bash', 'src/make_case.sh', str(mesh_file), run_id],
                    check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
@@ -62,8 +62,8 @@ def run_case(run_id, n_channels, u_in, cores=6, travel=1.5, mesh=None):
                    check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     # 5. Results, with checks
-    flow = get_results(str(case), n_channels)
-    heat = get_results(f'runs/{run_id}_heat', n_channels)
+    flow = get_results(str(case), n_channels, widths)
+    heat = get_results(f'runs/{run_id}_heat', n_channels, widths)
     flow_rate = u_in * plate['port_width'] * MM * physics['depth'] * MM
     T_out_expected = physics['inlet_T'] + physics['heat'] / (RHO * CP * flow_rate)
 

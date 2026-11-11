@@ -8,16 +8,16 @@ from sklearn.gaussian_process.kernels import RBF, WhiteKernel, ConstantKernel
 
 warnings.filterwarnings('ignore')
 
-designs = pd.read_csv('designs.csv')
+designs = pd.read_csv('designs.csv') #the M3 study results
 results = pd.read_csv('results.csv')
 data = results if 'set' in results.columns else results.merge(designs[['run_id', 'set']], on='run_id')
-m1 = pd.read_csv('results_M1.csv')
+m1 = pd.read_csv('results_M1.csv') #the 40 M1 results
 m1['run_id'] = m1['run_id'].str.replace('_M1', '', regex=False)
-m1 = m1.merge(designs[['run_id', 'set']], on='run_id')
+m1 = m1.merge(designs[['run_id', 'set']], on='run_id') #gives each M1 result its train or test label
 
-pool = data[(data['set'] == 'train') & (data['run_id'] != 'run_009')]
-test = data[data['set'] == 'test']
-cheap = m1[(m1['set'] == 'train') & (m1['run_id'] != 'run_009')]
+pool = data[(data['set'] == 'train') & (data['run_id'] != 'run_009')] #the 29 M3 designs
+test = data[data['set'] == 'test'] #the 10 M3 designs
+cheap = m1[(m1['set'] == 'train') & (m1['run_id'] != 'run_009')] #the 29 M1 designs
 
 
 def scale(df):
@@ -50,32 +50,32 @@ def error(name, predicted):
 
 
 low = {name: fit(scale(cheap), transform(cheap[name], use_log), noise_min)
-       for name, (use_log, noise_min) in outputs.items()}
+       for name, (use_log, noise_min) in outputs.items()} #trains one M1 surrogate for each output on the 29 cheap runs
 
 print(f"Cheap runs: {len(cheap)} M1 designs, {cheap['minutes'].sum():.0f} minutes in total "
       f"({cheap['minutes'].mean():.1f} min each). M3 runs average {pool['minutes'].mean():.1f} min each.")
 print("M1 surrogate alone, compared with the M3 test results:")
-for name, (use_log, noise_min) in outputs.items():
+for name, (use_log, noise_min) in outputs.items(): #how wrong the M1 surrogate is on its own against the M3 results
     print(f"  {name}: error {error(name, untransform(low[name].predict(scale(test)), use_log)):.2f}")
 
-rng = np.random.default_rng(0)
+rng = np.random.default_rng(0) #fixed random picks, so it's repeatable
 rows = []
-for size in [3, 5, 10, 15, 20, len(pool)]:
+for size in [3, 5, 10, 15, 20, len(pool)]: #the numbers of M3 runs to try. 3 is new, to see how far multi-fidelity can go with almost no expensive runs
     for repeat in range(10 if size < len(pool) else 1):
         picked = pool.iloc[rng.choice(len(pool), size=size, replace=False)]
         row = {'size': size}
-        for name, (use_log, noise_min) in outputs.items():
-            y_high = transform(picked[name], use_log).values
-            only = fit(scale(picked), y_high, noise_min)
-            gap = y_high - low[name].predict(scale(picked))
-            correction = fit(scale(picked), gap, noise_min)
-            combined = low[name].predict(scale(test)) + correction.predict(scale(test))
+        for name, (use_log, noise_min) in outputs.items(): #does dp and then Tmax
+            y_high = transform(picked[name], use_log).values #the M3 values for the picked designs
+            only = fit(scale(picked), y_high, noise_min) #method 1, M3 only
+            gap = y_high - low[name].predict(scale(picked)) #method 2, step 1: at each picked design, the difference between the true M3 value and what the cheap surrogate predicts. For dp on log, this is how many percent M1 is off
+            correction = fit(scale(picked), gap, noise_min) #method 2, step 2: a surrogate that learns that gap across the design space
+            combined = low[name].predict(scale(test)) + correction.predict(scale(test)) #method 2's prediction: the cheap prediction plus the learned gap, at the test designs
             row[f'{name} M3 only'] = error(name, untransform(only.predict(scale(test)), use_log))
             row[f'{name} multi-fidelity'] = error(name, untransform(combined, use_log))
         rows.append(row)
     print(f"{size} M3 runs done", flush=True)
 
-summary = pd.DataFrame(rows).groupby('size').mean()
+summary = pd.DataFrame(rows).groupby('size').mean() #averages the 10 picks at each size
 print("\nAverage test error (\u0394p in %, T max in \u00b0C):")
 print(summary.round(2).to_string())
 

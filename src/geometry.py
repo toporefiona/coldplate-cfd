@@ -6,7 +6,7 @@ from config import load_settings, channel_width
 MM = 0.001  # OpenFOAM works in metres, so every length in mm is multiplied by this
 
 
-def build_plate(n_channels, settings, out_file, show=False): #t takes the number of channels, the settings, the file name to save, and whether to open the gmsh viewer
+def build_plate(n_channels, settings, out_file, show=False, widths=None): #t takes the number of channels, the settings, the file name to save, and whether to open the gmsh viewer
     plate = settings['plate']
     L, W = plate['length'], plate['width']
     edge, wall = plate['edge_margin'], plate['wall']
@@ -14,6 +14,7 @@ def build_plate(n_channels, settings, out_file, show=False): #t takes the number
     x1 = L - plate['outlet_header']
     pw, pl = plate['port_width'], plate['port_length']
     w = channel_width(n_channels, plate)
+    widths = widths or [w] * n_channels
     cell = settings['mesh']['cell_size'] * MM
     wall_cell = settings['mesh'].get('wall_cell_size', settings['mesh']['cell_size']) * MM
     wall_zone = settings['mesh'].get('wall_zone', 5) * MM
@@ -31,7 +32,7 @@ def build_plate(n_channels, settings, out_file, show=False): #t takes the number
 
     strips = [] #empty list for metal strips
     for i in range(1, n_channels): #1 strip between each pair of channels, so N − 1 strips (i = 1 to N − 1)
-        y = edge + i * w + (i - 1) * wall #strip i starts across the plate: the edge margin, plus i channels, plus the i − 1 strips before it
+        y = edge + sum(widths[:i]) + (i - 1) * wall #strip i starts across the plate: the edge margin, plus i channels, plus the i − 1 strips before it
         strips.append((2, occ.addRectangle(x0 * MM, y * MM, 0, (x1 - x0) * MM, wall * MM))) ##draws that strip, from x0 to x1 along the plate, and wall (5 mm) wide, and adds it to the list
     fluid, _ = occ.cut(fluid, strips) #cuts all the strips out of the coolant reigon
     occ.synchronize() #updates the gmsh's model

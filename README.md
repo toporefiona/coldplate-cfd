@@ -1,6 +1,6 @@
 # Cold Plate CFD Surrogate
 
-An automated CFD study and machine learning surrogate for a liquid cooled battery cold plate, built with OpenFOAM, Gmsh and scikit-learn.
+An automated CFD study and machine learning surrogate for a liquid cooled battery cold plate, built with OpenFOAM, Gmsh, scikit-learn and JAX.
 
 The plate has parallel water channels under a battery giving off 200 W. More channels and faster flow cool the battery better, but need a stronger pump. This project maps that trade-off with 40 automated simulations, trains a Gaussian process surrogate that predicts any design in a fraction of a second, checks it against fresh CFD runs, and then tests three ways of getting a good surrogate from fewer expensive simulations.
 
@@ -16,6 +16,7 @@ The plate has parallel water channels under a battery giving off 200 W. More cha
 - **Checked with new CFD runs:** the surrogate's best design for a 30 Pa pump was confirmed and beat every design in the original study. Its 120 Pa pick failed, in a jet dominated design, and a flow uniformity flag added afterwards would have warned about it in advance.
 - **Adaptive sampling:** letting the surrogate choose where to simulate reached the same accuracy with about 30% fewer simulations than random sampling.
 - **Multi-fidelity:** 29 cheap coarse mesh runs plus 5 accurate runs matched the temperature accuracy of 29 accurate runs for about a quarter of the computing time. Matching the pressure drop as well needed about 20 accurate runs, a saving of about a quarter.
+- **Differentiable solver:** a simple flow solver in JAX gives gradients with respect to the channel widths. Its optimised widths improved real (OpenFOAM) flow uniformity by 18% at 0.1 m/s, but not at 0.25 m/s, where the inlet jet the simple model leaves out takes over.
   
 | Even flow: 16 channels, 0.113 m/s | Starved channels: 8 channels, 0.29 m/s |
 | --- | --- |
@@ -106,13 +107,28 @@ The final surrogate maps every design and finds the coolest one for any pump:
 
 ![Multi-fidelity against accurate runs only](results/multifidelity.png)
 
+**4. A differentiable solver in JAX.** A flow model without inertia (Darcy / Hele-Shaw) on a 1 mm grid, where each cell stores how much of it is water, so the geometry changes smoothly and JAX can give the gradient of the flow split with respect to every channel width. It matches the exact straight channel solution. Against OpenFOAM it gets 35% to 65% of Δp, and it cannot see the jet, so it is only trustworthy at low speed.
+
+![JAX solver against OpenFOAM](results/jax_vs_openfoam.png)
+
+Gradient descent on the channel widths (6 channels, total width fixed) evened out the flow in the JAX model in about 5 steps, with wider outer channels and narrower middle ones. Checked in OpenFOAM:
+
+| 6 channels | Equal widths | JAX widths |
+|---|---|---|
+| 0.1 m/s uniformity | 0.50 | **0.59** |
+| 0.25 m/s uniformity | 0.16 | 0.16 |
+
+At low speed the gradients pointed the right way. At 0.25 m/s the jet starves the channels next to the middle pair, which the simple model cannot see, so the change did nothing.
+
+![Optimised channel widths](results/jax_optimised_widths.png)
+
 ## Limitations and next steps
 
 - **No metal in the model.** A conjugate heat transfer model would show the true T max in starved channels, and would add the benefit narrow channels get from more wall area, which this model leaves out.
 - **Mesh error.** M3 is about 3% low on Δp. A few designs should be confirmed on M4.
 - **More design variables.** Header length and port width affect the flow split strongly and are natural next inputs.
 - **Smarter sampling.** Choosing runs by uncertainty alone spends many runs on the edges of the design space. Methods that also weigh how promising a design is would aim the runs better.
-- **Differentiable solver.** A simple flow solver in JAX would give gradients of Δp with respect to the geometry, for direct design optimisation.
+- **Inertia in the JAX solver.** The differentiable model leaves out the jet, so its gradients only help at low speed. Adding inertia would let it optimise jet dominated designs too.
 
 ## Repository layout
 
@@ -127,8 +143,9 @@ The final surrogate maps every design and finds the coolest one for any pump:
 | `src/surrogate.py`, `src/surrogate_maps.py` | train, test and use the surrogate |
 | `src/uniformity.py`, `src/sampling.py`, `src/adaptive.py`, `src/multifidelity.py` | the uniformity flag and the sampling experiments |
 | `src/plot_fields.py` | draws the temperature and velocity pictures from a finished case |
+| `src/jax_solver.py`, `src/jax_validate.py`, `src/jax_optimise.py` | the differentiable JAX solver, its check against OpenFOAM, and the width optimisation |
 | `case_template/`, `case_template_pseudo/` | OpenFOAM case settings |
-| `designs.csv`, `results.csv`, `results_M1.csv` | the designs and their results |
+| `designs.csv`, `results.csv`, `results_M1.csv`, `results_jax.csv` | the designs and their results |
 | `results/` | all plots |
 | `DESIGN_NOTES.md` | every decision, finding and check, in full |
 

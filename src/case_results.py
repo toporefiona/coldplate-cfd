@@ -50,7 +50,7 @@ def patch_values(path, name, n_faces):
     return np.full(n_faces, value)
 
 
-def get_results(case, n_channels):
+def get_results(case, n_channels, widths=None):
     """Return the key results of a finished case as a dictionary."""
     plate = load_settings()['plate']
 
@@ -88,11 +88,11 @@ def get_results(case, n_channels):
     flux = np.where(own_left, phi, -phi)[crossing]
     y = face_centres[:n_internal][crossing, 1]
 
-    w = channel_width(n_channels, plate)
+    widths = widths or [channel_width(n_channels, plate)] * n_channels
     flows = []
     for i in range(n_channels):
-        y_bottom = (plate['edge_margin'] + i * (w + plate['wall'])) * MM
-        y_top = y_bottom + w * MM
+        y_bottom = (plate['edge_margin'] + sum(widths[:i]) + i * plate['wall']) * MM
+        y_top = y_bottom + widths[i] * MM
         flows.append(flux[(y >= y_bottom) & (y <= y_top)].sum())
     flows = np.array(flows)
 

@@ -422,3 +422,40 @@ Doubling the header helps only a little. Channels 2 and 5 are still starved. Rea
 - With all 29 M3 runs as well, T max error 0.22 °C, the best surrogate in the project.
 
 **Open question:** the M1 surface predicts M3 T max better than an M3 surrogate trained on the same designs. This suggests part of the bumpiness in M3 T max is numerical scatter (the single hottest cell moving on the finer mesh), not only the physical jet effects found in sections 17 and 18. Probably both. A check: compare T max with a flow weighted or area averaged hot spot measure, which should be less sensitive to single cells.
+
+## 21. Differentiable solver in JAX
+
+**Why.** The CFD gives results but no gradients, so improving a design means trying many of them. A solver written in JAX can give the gradient of any output with respect to the geometry, so an optimiser knows which way to change each channel.
+
+**Model.** Flow without inertia (Darcy / Hele-Shaw): each cell lets water through in proportion to k = h²/(12μ), the same depth friction as the OpenFOAM model, but without the momentum of the water. The plate is a 1 mm grid (460 × 200 cells). Each cell stores how much of it is water, using partial cells at the channel edges, so the geometry changes smoothly as a width changes and the gradients exist. Metal cells get a tiny conductance (1e-6 of water). Neighbouring cells are joined with the harmonic mean. The inlet is spread over the first column and the outlet is held at p = 0. The pressure equation is solved with conjugate gradients and a Jacobi preconditioner (`jax.scipy.sparse.linalg.cg`), which JAX can differentiate through.
+
+**Checks.**
+- The grid's water area is 64,400 mm², matching checkMesh for N6.
+- Straight channel (300 × 20 mm, 0.05 m/s): Δp matches the exact formula 12μUL/h².
+
+**Against OpenFOAM (all 40 designs, `results_jax.csv`).**
+- Δp: JAX gives 34% to 65% of the OpenFOAM value (mean 47%). The ratio falls from about 65% at 0.1 m/s to about 35% at 0.3 m/s and hardly depends on the number of channels, so the missing part is the inertia of the jet and the headers.
+- Uniformity: JAX gives 0.72 to 0.77 for every design, against 0.01 to 0.5 in OpenFOAM. Without inertia there is no jet, so the model cannot see channels being starved.
+- Fidelity map: usable for friction driven trends and low speed designs, not for absolute Δp at higher speeds or for uniformity in jet dominated designs.
+
+**Optimisation (N6).** Widths are written as total × softmax(z), so they stay positive and always add up to 155 mm. The objective is the variance of the channel shares divided by the mean squared. I first used the standard deviation, but it oscillated (at rates 3.0 and 0.5), and the variance converged smoothly. Gradient descent with `jax.value_and_grad` at rate 2.0 converged in about 5 steps.
+- Result: widths [29.55, 25.93, 22.02, 22.02, 25.93, 29.55] mm, wider at the edges and narrower in the middle. Symmetric without being forced to be. In the JAX model, uniformity rose from 0.751 to 1.000 with Δp almost unchanged (35.26 to 35.32 Pa at 0.25 m/s).
+- Without inertia the flow is exactly proportional to speed, so the shares, and so the best widths, are the same at every speed.
+
+**OpenFOAM check of the optimised widths** (geometry.py, case_results.py and run_case.py now accept custom widths).
+
+| N6 | Equal widths | JAX widths |
+|---|---|---|
+| 0.1 m/s: uniformity | 0.502 | 0.590 |
+| 0.1 m/s: split (%) | 12.5 / 12.7 / 24.8 / 24.9 / 12.7 / 12.5 | 14.7 / 13.1 / 22.1 / 22.2 / 13.1 / 14.7 |
+| 0.1 m/s: Δp, T max | 21.51 Pa, 41.04 °C | 21.56 Pa, 40.79 °C |
+| 0.25 m/s: uniformity | 0.162 | 0.161 |
+| 0.25 m/s: split (%) | 9 / 6 / 35 / 35 / 6 / 9 | 11 / 5 / 33 / 34 / 5 / 11 |
+| 0.25 m/s: Δp, T max | 94.0 Pa, 40.1 °C | 93.1 Pa, 41.1 °C |
+
+- At 0.1 m/s the jet is weak and the widths helped: uniformity up 18% for 0.2% more Δp. They closed only part of the gap, because the middle pair still carries about 1.7 times as much as the outer channels.
+- At 0.25 m/s they did nothing. The real weakest channels are the second and fifth, next to the jet, while JAX thought the outer ones were weakest, so it fixed the wrong problem.
+
+**Lesson.** Gradients from a simple model gave a useful design change where its physics was close enough to reality, and none where it was not. The fidelity check against OpenFOAM showed in advance which case was which.
+
+**Next.** Add inertia to the JAX solver, so the gradients can see the jet at higher speeds.
